@@ -83,6 +83,23 @@ func showQuestions(db *sql.DB, drillId int) {
 	}
 }
 
+func makeQuestions(db *sql.DB, drillId int) {
+	questions := questionsRepository.FindByDrillId(db, drillId)
+	first := true
+	for _, question := range questions {
+		if !first {
+			fmt.Println("Next")
+			scanText()
+		}
+		fmt.Println("Question" + strconv.Itoa(question.ID))
+		fmt.Println(question.Content)
+		fmt.Println("Enter your answear:")
+		scanText()
+		fmt.Println("Answear: " + question.Answear)
+		first = false
+	}
+}
+
 func main() {
 	app := cli.NewApp()
 	first := !exists("./data.db")
@@ -144,6 +161,20 @@ func main() {
 					os.Exit(1)
 				}
 				showQuestions(db, id)
+				return nil
+			},
+		},
+		{
+			Name:  "question",
+			Usage: "make questions",
+			Action: func(c *cli.Context) error {
+				fmt.Println(c.Args().Get(0))
+				id, err := strconv.Atoi(c.Args().Get(0))
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+				makeQuestions(db, id)
 				return nil
 			},
 		},
