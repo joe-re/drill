@@ -4,65 +4,21 @@ import (
 	"bufio"
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/joe-re/drill/database"
+
+	"github.com/joe-re/drill/repository/drills"
 	"github.com/urfave/cli"
 )
 
-func DbExec(db *sql.DB, q string, args ...interface{}) sql.Result {
-	var result, err = db.Exec(q, args...)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	return result
-}
-
-func Query(db *sql.DB, q string, args ...interface{}) *sql.Rows {
-	var rows, err = db.Query(q, args...)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	return rows
-}
-
-func Exists(filename string) bool {
+func exists(filename string) bool {
 	_, err := os.Stat(filename)
 	return err == nil
 }
 
-func connectToDataBase() *sql.DB {
-	first := !Exists("./data.db")
-	if first {
-		os.Create("./data.db")
-	}
-	var db *sql.DB
-	db, err := sql.Open("sqlite3", "./data.db")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	if first {
-		createProjectsTable(db)
-	}
-	return db
-}
-
-func createProjectsTable(db *sql.DB) {
-	var q = ""
-	q = "CREATE TABLE projects ("
-	q += " id INTEGER PRIMARY KEY AUTOINCREMENT"
-	q += ", name VARCHAR(255) NOT NULL"
-	q += ", created_at TIMESTAMP DEFAULT (DATETIME('now','localtime'))"
-	q += ")"
-	DbExec(db, q)
-}
-
-func YorN() bool {
+func yOrN() bool {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		if scanner.Text() == "y" {
@@ -78,31 +34,31 @@ func YorN() bool {
 	return false
 }
 
-func AddQuestion(db *sql.DB, drillId int) error {
+func scanText() string {
 	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	if err := scanner.Err(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	return scanner.Text()
+}
+
+func addQuestion(db *sql.DB, drill drillsRepository.Drill) error {
 	i := 1
 	for {
 		fmt.Println("Question " + strconv.Itoa(i) + ":")
-		scanner.Scan()
-		if err := scanner.Err(); err != nil {
-			return err
-		}
-		question := scanner.Text()
+		question := scanText()
 		fmt.Println("Please enter answer:")
-		scanner.Scan()
-		if err := scanner.Err(); err != nil {
-			return err
-		}
-		answer := scanner.Text()
-		fmt.Println("Do you register it?")
+		answer := scanText()
+		fmt.Println("Do you register it? y/n")
 		fmt.Println("question:" + question)
 		fmt.Println("answer  :" + answer)
-		fmt.Println("y/n")
-		if YorN() {
+		if yOrN() {
 			fmt.Println("question" + strconv.Itoa(i) + "is registered")
 		}
 		fmt.Println("continue? y/n")
-		if YorN() {
+		if yOrN() {
 			i = i + 1
 		} else {
 			return nil
@@ -111,30 +67,23 @@ func AddQuestion(db *sql.DB, drillId int) error {
 	}
 }
 
-func createProject(db *sql.DB, projectName string) {
-	q := "INSERT INTO projects "
-	q += " (name)"
-	q += " VALUES"
-	q += " (?)"
-	DbExec(db, q, projectName)
-}
-
-func showProjects(db *sql.DB) {
-	rows := Query(db, "SELECT id, name FROM projects")
-	for rows.Next() {
-		var id int
-		var name string
-		if err := rows.Scan(&id, &name); err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println("id:" + strconv.Itoa(id) + ", name:" + name)
+func showDrills(db *sql.DB) {
+	drills := drillsRepository.All(db)
+	for _, drill := range drills {
+		fmt.Println("id:" + strconv.Itoa(drill.ID) + ", name:" + drill.Name)
 	}
-	defer rows.Close()
 }
 
 func main() {
 	app := cli.NewApp()
-	db := connectToDataBase()
+	first := !exists("./data.db")
+	if first {
+		os.Create("./data.db")
+	}
+	db := database.Connect()
+	if first {
+		drillsRepository.CreateTable(db)
+	}
 	app.Name = "drill"
 	app.Usage = "make an explosive entrance"
 	app.Commands = []cli.Command{
@@ -143,20 +92,34 @@ func main() {
 			Usage: "create a drill",
 			Action: func(c *cli.Context) error {
 				fmt.Println("Please enter drill name: ")
-				scanner := bufio.NewScanner(os.Stdin)
-				scanner.Scan()
-				if err := scanner.Err(); err != nil {
-					return err
-				}
-				createProject(db, scanner.Text())
+				drillsRepository.Create(db, scanText())
 				return nil
 			},
 		},
 		{
-			Name:  "show",
+			Name:  "list",
 			Usage: "show drills",
 			Action: func(c *cli.Context) error {
-				showProjects(db)
+				showDrills(db)
+				return nil
+			},
+		},
+		{
+			Name:  "add",
+			Usage: "add qusstion to a drill",
+			Action: func(c *cli.Context) error {
+				fmt.Println(c.Args().Get(0))
+				id, err := strconv.Atoi(c.Args().Get(0))
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+				drill := drillsRepository.Find(db, id)
+				if drill.ID == 0 {
+					fmt.Println("can't find drill")
+					os.Exit(0)
+				}
+				addQuestion(db, drill)
 				return nil
 			},
 		},
