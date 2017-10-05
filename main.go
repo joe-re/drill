@@ -59,7 +59,7 @@ func addQuestion(db *sql.DB, drill drillsRepository.Drill) error {
 		if yOrN() {
 			questionsRepository.Create(db, drill.ID, question, answer)
 			i = i + 1
-			fmt.Println("question" + strconv.Itoa(i) + "is registered")
+			fmt.Println("question " + strconv.Itoa(i) + " is registered")
 		}
 		fmt.Println("continue? y/n")
 		if !yOrN() {
@@ -140,7 +140,6 @@ func main() {
 			Name:  "add",
 			Usage: "add qusstion to a drill",
 			Action: func(c *cli.Context) error {
-				fmt.Println(c.Args().Get(0))
 				id, err := strconv.Atoi(c.Args().Get(0))
 				if err != nil {
 					fmt.Println(err)
