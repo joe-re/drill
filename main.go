@@ -10,6 +10,7 @@ import (
 	"github.com/joe-re/drill/database"
 
 	"github.com/joe-re/drill/repository/drills"
+	"github.com/joe-re/drill/repository/questions"
 	"github.com/urfave/cli"
 )
 
@@ -45,7 +46,7 @@ func scanText() string {
 }
 
 func addQuestion(db *sql.DB, drill drillsRepository.Drill) error {
-	i := 1
+	i := len(questionsRepository.FindByDrillId(db, drill.ID)) + 1
 	for {
 		fmt.Println("Question " + strconv.Itoa(i) + ":")
 		question := scanText()
@@ -55,6 +56,7 @@ func addQuestion(db *sql.DB, drill drillsRepository.Drill) error {
 		fmt.Println("question:" + question)
 		fmt.Println("answer  :" + answer)
 		if yOrN() {
+			questionsRepository.Create(db, drill.ID, question, answer)
 			fmt.Println("question" + strconv.Itoa(i) + "is registered")
 		}
 		fmt.Println("continue? y/n")
@@ -83,6 +85,7 @@ func main() {
 	db := database.Connect()
 	if first {
 		drillsRepository.CreateTable(db)
+		questionsRepository.CreateTable(db)
 	}
 	app.Name = "drill"
 	app.Usage = "make an explosive entrance"

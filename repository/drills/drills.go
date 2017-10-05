@@ -47,7 +47,9 @@ func Find(db *sql.DB, id int) Drill {
 	if !rows.Next() {
 		return Drill{}
 	}
-	return toDrill(rows)
+	drill := toDrill(rows)
+	rows.Close()
+	return drill
 }
 
 func toDrill(rows *sql.Rows) Drill {
