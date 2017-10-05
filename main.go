@@ -76,6 +76,13 @@ func showDrills(db *sql.DB) {
 	}
 }
 
+func showQuestions(db *sql.DB, drillId int) {
+	questions := questionsRepository.FindByDrillId(db, drillId)
+	for _, question := range questions {
+		fmt.Println("id:" + strconv.Itoa(question.ID) + ", question:" + question.Content + ", answear:" + question.Answear)
+	}
+}
+
 func main() {
 	app := cli.NewApp()
 	first := !exists("./data.db")
@@ -123,6 +130,20 @@ func main() {
 					os.Exit(0)
 				}
 				addQuestion(db, drill)
+				return nil
+			},
+		},
+		{
+			Name:  "show",
+			Usage: "show questions in a drill",
+			Action: func(c *cli.Context) error {
+				fmt.Println(c.Args().Get(0))
+				id, err := strconv.Atoi(c.Args().Get(0))
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+				showQuestions(db, id)
 				return nil
 			},
 		},
