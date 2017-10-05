@@ -58,8 +58,8 @@ func addQuestion(db *sql.DB, drill drillsRepository.Drill) error {
 		fmt.Println("answer  :" + answer)
 		if yOrN() {
 			questionsRepository.Create(db, drill.ID, question, answer)
-			i = i + 1
 			fmt.Println("question " + strconv.Itoa(i) + " is registered")
+			i = i + 1
 		}
 		fmt.Println("continue? y/n")
 		if !yOrN() {
@@ -85,17 +85,19 @@ func showQuestions(db *sql.DB, drillId int) {
 func makeQuestions(db *sql.DB, drillId int) {
 	questions := questionsRepository.FindByDrillId(db, drillId)
 	first := true
+	i := 1
 	for _, question := range questions {
 		if !first {
 			fmt.Println("Next")
 			scanText()
 		}
-		fmt.Println("Question" + strconv.Itoa(question.ID))
+		fmt.Println("Question" + strconv.Itoa(i))
 		fmt.Println(question.Content)
 		fmt.Println("Enter your answear:")
 		scanText()
 		fmt.Println("Answear: " + question.Answear)
 		first = false
+		i += 1
 	}
 }
 
@@ -128,6 +130,25 @@ func main() {
 				return nil
 			},
 		},
+		{
+			Name:  "destroy",
+			Usage: "destroy a drill",
+			Action: func(c *cli.Context) error {
+				id, err := strconv.Atoi(c.Args().Get(0))
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+				drill := drillsRepository.Find(db, id)
+				fmt.Println("Do you destroy this drill? y/n")
+				fmt.Println("id:" + strconv.Itoa(drill.ID) + ", name:" + drill.Name)
+				if yOrN() {
+					drillsRepository.Destroy(db, id)
+				}
+				return nil
+			},
+		},
+
 		{
 			Name:  "list",
 			Usage: "show drills",

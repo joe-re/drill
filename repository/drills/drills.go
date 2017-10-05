@@ -32,6 +32,11 @@ func Create(db *sql.DB, projectName string) {
 	database.DbExec(db, q, projectName)
 }
 
+func Destroy(db *sql.DB, drillId int) {
+	q := "DELETE FROM drills WHERE id = ?"
+	database.DbExec(db, q, drillId)
+}
+
 func All(db *sql.DB) []Drill {
 	rows := database.Query(db, "SELECT * FROM drills")
 	results := []Drill{}
