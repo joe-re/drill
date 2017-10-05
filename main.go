@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 
@@ -11,12 +12,22 @@ import (
 	"github.com/urfave/cli"
 )
 
-func DbExec(db *sql.DB, q string) {
-	var _, err = db.Exec(q)
+func DbExec(db *sql.DB, q string, args ...interface{}) sql.Result {
+	var result, err = db.Exec(q, args...)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	return result
+}
+
+func Query(db *sql.DB, q string, args ...interface{}) *sql.Rows {
+	var rows, err = db.Query(q, args...)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	return rows
 }
 
 func Exists(filename string) bool {
@@ -26,11 +37,6 @@ func Exists(filename string) bool {
 
 func connectToDataBase() *sql.DB {
 	first := !Exists("./data.db")
-	if first {
-		fmt.Printf("first")
-	} else {
-		fmt.Printf("false")
-	}
 	if first {
 		os.Create("./data.db")
 	}
@@ -110,11 +116,25 @@ func createProject(db *sql.DB, projectName string) {
 	q += " (name)"
 	q += " VALUES"
 	q += " (?)"
-	db.Exec(q, projectName)
+	DbExec(db, q, projectName)
+}
+
+func showProjects(db *sql.DB) {
+	rows := Query(db, "SELECT id, name FROM projects")
+	for rows.Next() {
+		var id int
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("id:" + strconv.Itoa(id) + ", name:" + name)
+	}
+	defer rows.Close()
 }
 
 func main() {
 	app := cli.NewApp()
+	db := connectToDataBase()
 	app.Name = "drill"
 	app.Usage = "make an explosive entrance"
 	app.Commands = []cli.Command{
@@ -122,7 +142,6 @@ func main() {
 			Name:  "create",
 			Usage: "create a drill",
 			Action: func(c *cli.Context) error {
-				db := connectToDataBase()
 				fmt.Println("Please enter drill name: ")
 				scanner := bufio.NewScanner(os.Stdin)
 				scanner.Scan()
@@ -130,6 +149,14 @@ func main() {
 					return err
 				}
 				createProject(db, scanner.Text())
+				return nil
+			},
+		},
+		{
+			Name:  "show",
+			Usage: "show drills",
+			Action: func(c *cli.Context) error {
+				showProjects(db)
 				return nil
 			},
 		},
