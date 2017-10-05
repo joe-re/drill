@@ -28,9 +28,9 @@ func Query(db *sql.DB, q string, args ...interface{}) *sql.Rows {
 	return rows
 }
 
-func Connect() *sql.DB {
+func Connect(dbPath string) *sql.DB {
 	var db *sql.DB
-	db, err := sql.Open("sqlite3", "./data.db")
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

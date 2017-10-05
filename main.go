@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 
 	"github.com/joe-re/drill/database"
@@ -57,14 +58,12 @@ func addQuestion(db *sql.DB, drill drillsRepository.Drill) error {
 		fmt.Println("answer  :" + answer)
 		if yOrN() {
 			questionsRepository.Create(db, drill.ID, question, answer)
+			i = i + 1
 			fmt.Println("question" + strconv.Itoa(i) + "is registered")
 		}
 		fmt.Println("continue? y/n")
-		if yOrN() {
-			i = i + 1
-		} else {
+		if !yOrN() {
 			return nil
-
 		}
 	}
 }
@@ -102,11 +101,17 @@ func makeQuestions(db *sql.DB, drillId int) {
 
 func main() {
 	app := cli.NewApp()
-	first := !exists("./data.db")
-	if first {
-		os.Create("./data.db")
+	executablePath, err := os.Executable()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
-	db := database.Connect()
+	dbPath := path.Dir(executablePath) + "/drill.db"
+	first := !exists(dbPath)
+	if first {
+		os.Create(dbPath)
+	}
+	db := database.Connect(dbPath)
 	if first {
 		drillsRepository.CreateTable(db)
 		questionsRepository.CreateTable(db)
@@ -154,7 +159,6 @@ func main() {
 			Name:  "show",
 			Usage: "show questions in a drill",
 			Action: func(c *cli.Context) error {
-				fmt.Println(c.Args().Get(0))
 				id, err := strconv.Atoi(c.Args().Get(0))
 				if err != nil {
 					fmt.Println(err)
@@ -168,7 +172,6 @@ func main() {
 			Name:  "question",
 			Usage: "make questions",
 			Action: func(c *cli.Context) error {
-				fmt.Println(c.Args().Get(0))
 				id, err := strconv.Atoi(c.Args().Get(0))
 				if err != nil {
 					fmt.Println(err)
